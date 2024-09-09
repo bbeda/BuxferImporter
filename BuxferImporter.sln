@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuxferImporter", "BuxferImp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuxferImporter.Client", "BuxferImporter\BuxferImporter.Client\BuxferImporter.Client.csproj", "{0A43DCCD-8EA7-4C97-BB3C-E60234726A15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuxferImporter.BuxferClient", "BuxferImporter.BuxferClient\BuxferImporter.BuxferClient.csproj", "{133F344E-9F0D-470C-8A01-69CC06DDC755}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuxferImporter.Buxfer", "BuxferImporter.Buxfer\BuxferImporter.Buxfer.csproj", "{40F88980-1C62-4E6D-9A80-59E590EC74C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{0A43DCCD-8EA7-4C97-BB3C-E60234726A15}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0A43DCCD-8EA7-4C97-BB3C-E60234726A15}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0A43DCCD-8EA7-4C97-BB3C-E60234726A15}.Release|Any CPU.Build.0 = Release|Any CPU
-		{133F344E-9F0D-470C-8A01-69CC06DDC755}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{133F344E-9F0D-470C-8A01-69CC06DDC755}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{133F344E-9F0D-470C-8A01-69CC06DDC755}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{133F344E-9F0D-470C-8A01-69CC06DDC755}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40F88980-1C62-4E6D-9A80-59E590EC74C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40F88980-1C62-4E6D-9A80-59E590EC74C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40F88980-1C62-4E6D-9A80-59E590EC74C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40F88980-1C62-4E6D-9A80-59E590EC74C1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

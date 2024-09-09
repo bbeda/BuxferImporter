@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BuxferImporter.BuxferClient;
+namespace BuxferImporter.Buxfer;
 public static class RegisterDependencies
 {
     private const string BuxferBaseAddressKey = "Buxfer:BaseAddress";

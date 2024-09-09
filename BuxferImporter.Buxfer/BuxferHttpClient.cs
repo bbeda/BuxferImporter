@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
-namespace BuxferImporter.BuxferClient;
+namespace BuxferImporter.Buxfer;
 internal class BuxferHttpClient(
     HttpClient httpClient,
     IOptions<BuxferOptions> buxferOptions,

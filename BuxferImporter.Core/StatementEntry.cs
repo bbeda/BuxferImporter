@@ -1,24 +1,24 @@
 ﻿namespace BuxferImporter.Core;
 public record StatementEntry
 {
-    public required string? TransactionType { get; init; }
+    public required TransactionType? TransactionType { get; init; }
 
     public required string? Product { get; init; }
 
     public required string? Description { get; init; }
 
-    public required string? Amount { get; init; }
+    public required decimal? Amount { get; init; }
 
-    public required string? Fee { get; init; }
+    public required decimal? Fee { get; init; }
 
     public required string? Currency { get; init; }
 
-    public required string? State { get; init; }
+    public required TransactionState? State { get; init; }
 
-    public required string? Balance { get; init; }
+    public required decimal? Balance { get; init; }
 
-    public required string? StartDate { get; init; }
+    public required DateTimeOffset? StartDate { get; init; }
 
-    public required string? CompletedDate { get; init; }
+    public required DateTimeOffset? CompletedDate { get; init; }
 
 }

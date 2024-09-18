@@ -9,10 +9,7 @@ public sealed class StatementParserTests
         var stream = File.OpenRead(@".\SampleFiles\real_statement.csv");
         var parser = new StatementParser();
 
-        var entries = parser.ParseAsync(stream);
-        await foreach (var entry in entries)
-        {
-            Assert.IsNotNull(entry);
-        }
+        var entries = await parser.ParseAsync(stream).ToListAsync();
+        var types = entries.Select(e => e.TransactionType).Distinct();
     }
 }

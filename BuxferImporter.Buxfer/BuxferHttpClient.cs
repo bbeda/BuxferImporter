@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
 namespace BuxferImporter.Buxfer;
-internal class BuxferHttpClient(
+public class BuxferHttpClient(
     HttpClient httpClient,
     IOptions<BuxferOptions> buxferOptions,
     IMemoryCache memoryCache)
@@ -36,20 +36,38 @@ internal class BuxferHttpClient(
         return token;
     }
 
-    public async Task<TransactionsListResponse> LoadTransactionsAsync(string accountId, int page = 1)
+    internal async Task<TransactionsListResponse> LoadTransactionsAsync(
+        string accountId,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null,
+        int page = 1)
     {
         var token = await LoadTokenAsync();
-        var response = await httpClient.GetAsync($"transactions?token={token}&page={page}&accountId={accountId}");
+
+        var query = $"transactions?token={token}&page={page}&accountId={accountId}";
+        query = AddQueryDate(query, "startDate", startDate);
+        query = AddQueryDate(query, "endDate", endDate);
+
+        var response = await httpClient.GetAsync(query);
         return (await response!.Content!.ReadFromJsonAsync<BuxferResponse<TransactionsListResponse>>())?.Response!;
+
+        static string AddQueryDate(string query, string key, DateOnly? date)
+        {
+            if (date.HasValue)
+            {
+                query += $"&{key}={date.Value:yyyy-MM-dd}";
+            }
+            return query;
+        }
     }
 
-    public async IAsyncEnumerable<BuxferTransaction> LoadAllTransactionsAsync(string accountId)
+    public async IAsyncEnumerable<BuxferTransaction> LoadAllTransactionsAsync(string accountId, DateOnly? startDate = null, DateOnly? endDate = null)
     {
         var page = 1;
         TransactionsListResponse? response;
         do
         {
-            response = await LoadTransactionsAsync(accountId, page++);
+            response = await LoadTransactionsAsync(accountId, page++, startDate, endDate);
             foreach (var transaction in response.Transactions)
             {
                 yield return transaction;
@@ -77,14 +95,14 @@ internal class BuxferHttpClient(
     }
 }
 
-internal record BuxferOptions
+public record BuxferOptions
 {
     public required string Email { get; set; }
 
     public required string Password { get; set; }
 }
 
-internal record BuxferTransaction(
+public record BuxferTransaction(
     decimal Id,
     string Description,
     decimal Amount,

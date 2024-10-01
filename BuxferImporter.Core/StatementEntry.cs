@@ -1,5 +1,5 @@
 ﻿namespace BuxferImporter.Core;
-public record StatementEntry
+public record StatementEntry : IIdentifiableTransaction
 {
     public required TransactionType? TransactionType { get; init; }
 
@@ -21,4 +21,5 @@ public record StatementEntry
 
     public required DateTimeOffset? CompletedDate { get; init; }
 
+    public string GetIdentifier() => $"{Description}-{Amount}-{Currency}-{StartDate}-{TransactionType}";
 }

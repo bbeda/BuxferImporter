@@ -120,23 +120,7 @@ public record BuxferTransaction(
     string Date,
     string Type,
     decimal AccountId,
-    string Tags)
-{
-    public string DuplicationKey
-    {
-        get
-        {
-            using var memoryStream = new MemoryStream();
-            using var binaryWriter = new BinaryWriter(memoryStream);
-
-            binaryWriter.Write(Description);
-            binaryWriter.Write(Amount);
-            binaryWriter.Write(Date);
-
-            return Convert.ToBase64String(memoryStream.ToArray());
-        }
-    }
-}
+    string Tags);
 
 internal record TransactionsListResponse(
     string Status,

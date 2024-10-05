@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BuxferImporter.Buxfer.Explorer": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

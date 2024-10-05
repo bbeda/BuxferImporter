@@ -12,8 +12,8 @@ internal class Importer(BuxferHttpClient httpClient, IStatementParser statementP
             var transactionDate = DateOnly.FromDateTime(entry.StartDate!.Value.Date);
             if (!DailyBuxferTransactions.ContainsKey(transactionDate))
             {
-                var transactions = await httpClient.LoadAllTransactionsAsync(entry.Product, transactionDate, transactionDate);
-                DailyBuxferTransactions[entry.StartDate.Value.Date] = transactions.ToArray();
+                var transactions = await httpClient.LoadAllTransactionsAsync(entry.Product, transactionDate, transactionDate).ToListAsync();
+                DailyBuxferTransactions[transactionDate] = transactions.ToArray();
             }
         }
     }

@@ -4,19 +4,24 @@ using System.Net.Http.Json;
 
 namespace BuxferImporter.Buxfer;
 public class BuxferHttpClient(
-    HttpClient httpClient,
+    IHttpClientFactory httpClientFactory,
     IOptions<BuxferOptions> buxferOptions,
     IMemoryCache memoryCache)
 {
+    public const string HttpClientName = "BuxferApi";
+
     private const string BuxferTokenKey = "BuxferToken";
 
     private async Task<string> GetTokenAsync()
     {
-        var response = await httpClient.GetAsync($"login?email={buxferOptions.Value.Email}&password={buxferOptions.Value.Password}");
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.PostAsync($"login?email={buxferOptions.Value.Email}&password={buxferOptions.Value.Password}", null);
         _ = response.EnsureSuccessStatusCode();
         var tokenResponse = await response.Content.ReadFromJsonAsync<BuxferResponse<TokenResponse>>();
         return tokenResponse?.Response.Token!;
     }
+
+    private HttpClient CreateHttpClient() => httpClientFactory.CreateClient(HttpClientName);
 
     private async Task<string> LoadTokenAsync()
     {
@@ -48,6 +53,7 @@ public class BuxferHttpClient(
         query = AddQueryDate(query, "startDate", startDate);
         query = AddQueryDate(query, "endDate", endDate);
 
+        using var httpClient = CreateHttpClient();
         var response = await httpClient.GetAsync(query);
         return (await response!.Content!.ReadFromJsonAsync<BuxferResponse<TransactionsListResponse>>())?.Response!;
 
@@ -67,7 +73,7 @@ public class BuxferHttpClient(
         TransactionsListResponse? response;
         do
         {
-            response = await LoadTransactionsAsync(accountId, page++, startDate, endDate);
+            response = await LoadTransactionsAsync(accountId, startDate, endDate, page++);
             foreach (var transaction in response.Transactions)
             {
                 yield return transaction;
@@ -82,6 +88,7 @@ public class BuxferHttpClient(
 
     public async Task DeleteTransactionAsync(string transactionId)
     {
+        using var httpClient = CreateHttpClient();
         var token = await LoadTokenAsync();
         var response = await httpClient.PostAsync($"delete_transaction?token={token}&id={transactionId}", new StringContent(""));
         _ = response.EnsureSuccessStatusCode();
@@ -97,9 +104,13 @@ public class BuxferHttpClient(
 
 public record BuxferOptions
 {
-    public required string Email { get; set; }
+    public static string SectionName { get; } = "Buxfer";
 
-    public required string Password { get; set; }
+    public required string Email { get; init; }
+
+    public required string Password { get; init; }
+
+    public required string BaseAddress { get; init; }
 }
 
 public record BuxferTransaction(

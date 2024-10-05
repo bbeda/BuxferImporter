@@ -20,4 +20,8 @@
     <ProjectReference Include="..\BuxferImporter.Revolut\BuxferImporter.Revolut.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="MSTest.Analyzers" Version="3.6.1" />
+  </ItemGroup>
+
 </Project>

@@ -1,22 +1,20 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace BuxferImporter.Buxfer;
 public static class RegisterDependencies
 {
-    private const string BuxferBaseAddressKey = "Buxfer:BaseAddress";
-
-    public static void Register(IServiceCollection services, IConfiguration configuration)
+    public static void AddBuxferServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var baseAddress = configuration.GetValue<string>(BuxferBaseAddressKey);
-        if (string.IsNullOrWhiteSpace(baseAddress))
-        {
-            throw new InvalidOperationException($"Buxfer base address is not configured. Missing {BuxferBaseAddressKey}");
-        }
+        services.AddMemoryCache();
 
-        services.AddHttpClient<BuxferHttpClient>(client =>
+        services.Configure<BuxferOptions>(configuration.GetSection(BuxferOptions.SectionName));
+
+        services.AddHttpClient(BuxferHttpClient.HttpClientName, (services, client) =>
         {
-            client.BaseAddress = new Uri(baseAddress);
+            var buxferOptions = services.GetRequiredService<IOptions<BuxferOptions>>();
+            client.BaseAddress = new Uri(buxferOptions.Value.BaseAddress);
         });
         services.AddSingleton<BuxferHttpClient>();
     }

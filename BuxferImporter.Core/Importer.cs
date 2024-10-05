@@ -1,7 +1,7 @@
 ﻿using BuxferImporter.Buxfer;
 
 namespace BuxferImporter.Core;
-internal class Importer(BuxferHttpClient httpClient, IStatementParser statementParser)
+public class Importer(BuxferHttpClient httpClient, IStatementParser statementParser)
 {
     private readonly Dictionary<DateOnly, BuxferTransaction[]> DailyBuxferTransactions = new();
 
@@ -12,7 +12,7 @@ internal class Importer(BuxferHttpClient httpClient, IStatementParser statementP
             var transactionDate = DateOnly.FromDateTime(entry.StartDate!.Value.Date);
             if (!DailyBuxferTransactions.ContainsKey(transactionDate))
             {
-                var transactions = await httpClient.LoadAllTransactionsAsync(entry.Product, transactionDate, transactionDate).ToListAsync();
+                var transactions = await httpClient.LoadAllTransactionsAsync("1441844", transactionDate, transactionDate).ToListAsync();
                 DailyBuxferTransactions[transactionDate] = transactions.ToArray();
             }
         }

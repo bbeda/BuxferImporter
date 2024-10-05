@@ -19,9 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="SampleFiles\real_statement.csv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Folder Include="SampleFiles\" />
   </ItemGroup>
 
 </Project>

@@ -1,19 +1,19 @@
 ﻿using BuxferImporter.Buxfer;
+using BuxferImporter.Core;
+using BuxferImporter.Revolut;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 var appBuilder = Host.CreateApplicationBuilder();
 appBuilder.Services.AddBuxferServices(appBuilder.Configuration);
 appBuilder.Services.AddMemoryCache();
+appBuilder.Services.RegisterCoreServices();
+appBuilder.Services.RegisterRevolutServices();
 
 var app = appBuilder.Build();
 
 app.Start();
 
-var buxferHttpClient = app.Services.GetRequiredService<BuxferHttpClient>();
-var transactions = buxferHttpClient.LoadAllTransactionsAsync("1441844", new DateOnly(2024,04,19), new DateOnly(2024, 04, 19));
-
-await foreach (var transaction in transactions)
-{
-    Console.WriteLine(transaction);
-}
+using var data = File.OpenRead(Path.Combine(@".\SampleFiles", "real_statement.csv"));
+var importer = app.Services.GetRequiredService<Importer>();
+await importer.ImportAsync(data);

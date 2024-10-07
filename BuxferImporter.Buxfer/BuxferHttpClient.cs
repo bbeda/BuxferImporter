@@ -113,16 +113,48 @@ public record BuxferOptions
     public required string BaseAddress { get; init; }
 }
 
-public record BuxferTransaction(
-    decimal Id,
-    string Description,
-    decimal Amount,
-    string Date,
-    string Type,
-    decimal AccountId,
-    string Tags);
+public class BuxferTransaction
+{
+    public required decimal Id { get; init; }
+
+    public required string? Description { get; init; }
+
+    public required decimal Amount { get; init; }
+
+    public required DateOnly Date { get; init; }
+
+    public required string Type { get; init; }
+
+    public required decimal AccountId { get; init; }
+
+    public required string? Tags { get; init; }
+
+    public override int GetHashCode()
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(Description);
+        hashCode.Add(Amount);
+        hashCode.Add(Date);
+        return hashCode.ToHashCode();
+    }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not BuxferTransaction other)
+        {
+            return false;
+        }
+        return Description == other.Description &&
+            Amount == other.Amount &&
+            Date == other.Date;
+    }
+
+    public static bool operator ==(BuxferTransaction? left, BuxferTransaction? right) => Equals(left, right);
+
+    public static bool operator !=(BuxferTransaction? left, BuxferTransaction? right) => !Equals(left, right);
+}
 
 internal record TransactionsListResponse(
-    string Status,
-    int NumTransactions,
-    BuxferTransaction[] Transactions);
+string Status,
+int NumTransactions,
+BuxferTransaction[] Transactions);

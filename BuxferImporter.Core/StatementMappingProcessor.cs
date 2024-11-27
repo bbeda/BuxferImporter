@@ -4,6 +4,7 @@ namespace BuxferImporter.Core;
 public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementParser statementParser)
 {
     private readonly Dictionary<DateOnly, List<BuxferTransaction>> DailyBuxferTransactions = new();
+    private readonly List<StatementMappingResult> statementMappingResults = new();
 
     public async Task ImportAsync(Stream source)
     {
@@ -16,12 +17,34 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
                 DailyBuxferTransactions[transactionDate] = transactions;
             }
 
-            
+            var todayTransactions = DailyBuxferTransactions[transactionDate];
+            var matchingTransaction = todayTransactions.FirstOrDefault(t => entry.IsEquivalentWith(t));
+
+            switch (matchingTransaction)
+            {
+                case null:
+                    statementMappingResults.Add(new StatementMappingResult
+                    {
+                        StatementEntry = entry,
+                        Action = StatementMappingAction.Create
+                    });
+                    break;
+                default:
+                    statementMappingResults.Add(new StatementMappingResult
+                    {
+                        StatementEntry = entry,
+                        BuxferTransaction = matchingTransaction,
+                        Action = entry.Description == matchingTransaction.Description ? StatementMappingAction.None : StatementMappingAction.Update
+                    });
+                    todayTransactions.Remove(matchingTransaction);
+                    break;
+            }
+
         }
     }
 }
 
-file record StatementMappingResult
+internal record StatementMappingResult
 {
     public StatementEntry StatementEntry { get; init; } = default!;
 
@@ -30,8 +53,9 @@ file record StatementMappingResult
     public StatementMappingAction Action { get; init; }
 }
 
-file enum StatementMappingAction
+internal enum StatementMappingAction
 {
     None,
-    Create
+    Create,
+    Update
 }

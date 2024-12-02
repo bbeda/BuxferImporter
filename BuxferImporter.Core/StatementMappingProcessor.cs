@@ -11,6 +11,8 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
         await foreach (var entry in statementParser.ParseAsync(source))
         {
             var transactionDate = DateOnly.FromDateTime(entry.StartDate!.Value.Date);
+            var day = transactionDate.Day;
+            var month = transactionDate.Month;
             if (!DailyBuxferTransactions.ContainsKey(transactionDate))
             {
                 var transactions = await httpClient.LoadAllTransactionsAsync("1441844", transactionDate, transactionDate).ToListAsync();
@@ -41,6 +43,23 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
             }
 
         }
+
+        var removedTransactions = new List<BuxferTransaction>();
+        foreach (var key in DailyBuxferTransactions.Keys)
+        {
+            removedTransactions.Clear();
+            foreach (var transaction in DailyBuxferTransactions[key])
+            {
+                statementMappingResults.Add(new StatementMappingResult
+                {
+                    BuxferTransaction = transaction,
+                    Action = StatementMappingAction.Delete
+                });
+                removedTransactions.Add(transaction);
+            }
+
+            DailyBuxferTransactions[key].RemoveAll(t => removedTransactions.Contains(t));
+        }
     }
 }
 
@@ -57,5 +76,6 @@ internal enum StatementMappingAction
 {
     None,
     Create,
-    Update
+    Update,
+    Delete
 }

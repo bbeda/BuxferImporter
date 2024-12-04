@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using System.ComponentModel;
 using System.Net.Http.Json;
 
 namespace BuxferImporter.Buxfer;
@@ -94,12 +95,68 @@ public class BuxferHttpClient(
         _ = response.EnsureSuccessStatusCode();
     }
 
+    public async Task CreateTransactionAsync(NewBuxferTransaction transaction)
+    {
+        using var httpClient = CreateHttpClient();
+        var token = await LoadTokenAsync();
+        var response = await httpClient.PostAsync($"transaction_add?token={token}", JsonContent.Create(new NewBuxferTransactionRequest
+        {
+            Description = transaction.Description,
+            Amount = transaction.Amount,
+            Date = transaction.Date.ToString("yyyy-MM-dd"),
+            Type = transaction.Type,
+            Status = transaction.Status,
+            AccountId = transaction.AccountId,
+            FromAccountId = transaction.FromAccountId,
+            ToAccountId = transaction.ToAccountId
+        }));
+        _ = response.EnsureSuccessStatusCode();
+    }
+
+    public async Task UpdateTransactionAsync(UpdateBuxferTransaction transaction)
+    {
+        using var httpClient = CreateHttpClient();
+        var token = await LoadTokenAsync();
+        var response = await httpClient.PostAsync($"transaction_edit?token={token}", JsonContent.Create(new
+        {
+            Description = transaction.Description,
+            AccountId = transaction.AccountId
+        }));
+        _ = response.EnsureSuccessStatusCode();
+    }
+
     private record TokenResponse(string Status, string Token);
 
     private record BuxferResponse<T>
     {
         public T Response { get; init; } = default!;
     }
+
+    private record NewBuxferTransactionRequest
+    {
+        public string Description { get; init; } = default!;
+
+        public decimal Amount { get; init; }
+
+        public string Date { get; init; } = default!;
+
+        public BuxferTransactionType Type { get; init; }
+
+        public BuxferTransactionStatus Status { get; init; }
+
+        public string AccountId { get; init; } = default!;
+
+        public string? FromAccountId { get; init; }
+
+        public string? ToAccountId { get; init; }
+    }
+}
+
+public class UpdateBuxferTransaction
+{
+    public required string Description { get; init; }
+
+    public required string AccountId { get; init; }
 }
 
 public record BuxferOptions
@@ -113,6 +170,25 @@ public record BuxferOptions
     public required string BaseAddress { get; init; }
 }
 
+public class NewBuxferTransaction
+{
+    public required string Description { get; init; }
+
+    public required decimal Amount { get; init; }
+
+    public required DateOnly Date { get; init; }
+
+    public required BuxferTransactionType Type { get; init; }
+
+    public required BuxferTransactionStatus Status { get; init; }
+
+    public required string AccountId { get; init; }
+
+    public required string? FromAccountId { get; init; }
+
+    public required string? ToAccountId { get; init; }
+}
+
 public class BuxferTransaction
 {
     public required decimal Id { get; init; }
@@ -123,7 +199,7 @@ public class BuxferTransaction
 
     public required DateOnly Date { get; init; }
 
-    public required string Type { get; init; }
+    public required BuxferTransactionType Type { get; init; }
 
     public required decimal AccountId { get; init; }
 
@@ -158,3 +234,27 @@ internal record TransactionsListResponse(
 string Status,
 int NumTransactions,
 BuxferTransaction[] Transactions);
+
+public enum BuxferTransactionType
+{
+    Income,
+    Expense,
+    Refund,
+    Payment,
+    Transfer,
+    InvestmentBuy,
+    InvestmentSell,
+    InvestmentDividend,
+    CapitalGain,
+    CapitalLoss,
+    SharedBill,
+    PaidForFriend,
+    Settlement,
+    Loan
+}
+
+public enum BuxferTransactionStatus
+{
+    Cleared,
+    Pending
+}

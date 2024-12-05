@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
 using System.Net.Http.Json;
@@ -99,17 +100,18 @@ public class BuxferHttpClient(
     {
         using var httpClient = CreateHttpClient();
         var token = await LoadTokenAsync();
-        var response = await httpClient.PostAsync($"transaction_add?token={token}", JsonContent.Create(new NewBuxferTransactionRequest
+
+        var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            Description = transaction.Description,
-            Amount = transaction.Amount,
-            Date = transaction.Date.ToString("yyyy-MM-dd"),
-            Type = transaction.Type,
-            Status = transaction.Status,
-            AccountId = transaction.AccountId,
-            FromAccountId = transaction.FromAccountId,
-            ToAccountId = transaction.ToAccountId
-        }));
+            { "description", transaction.Description },
+            { "amount", transaction.Amount.ToString() },
+            { "date", transaction.Date.ToString("yyyy-MM-dd") },
+            { "type", transaction.Type.ToString() },
+            { "status", transaction.Status.ToString() },
+            { "accountId", transaction.AccountId }
+        });
+
+        var response = await httpClient.PostAsync($"transaction_add?token={token}", content);
         _ = response.EnsureSuccessStatusCode();
     }
 
@@ -117,11 +119,15 @@ public class BuxferHttpClient(
     {
         using var httpClient = CreateHttpClient();
         var token = await LoadTokenAsync();
-        var response = await httpClient.PostAsync($"transaction_edit?token={token}", JsonContent.Create(new
+
+        var content = new Dictionary<string, string?>
         {
-            Description = transaction.Description,
-            AccountId = transaction.AccountId
-        }));
+            { "Description", transaction.Description },
+            { "AccountId", transaction.AccountId },
+            { "Id", transaction.Id.ToString()}
+        };
+
+        var response = await httpClient.PostAsync(QueryHelpers.AddQueryString($"transaction_edit?token={token}", content), new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
         _ = response.EnsureSuccessStatusCode();
     }
 
@@ -131,25 +137,6 @@ public class BuxferHttpClient(
     {
         public T Response { get; init; } = default!;
     }
-
-    private record NewBuxferTransactionRequest
-    {
-        public string Description { get; init; } = default!;
-
-        public decimal Amount { get; init; }
-
-        public string Date { get; init; } = default!;
-
-        public BuxferTransactionType Type { get; init; }
-
-        public BuxferTransactionStatus Status { get; init; }
-
-        public string AccountId { get; init; } = default!;
-
-        public string? FromAccountId { get; init; }
-
-        public string? ToAccountId { get; init; }
-    }
 }
 
 public class UpdateBuxferTransaction
@@ -157,6 +144,8 @@ public class UpdateBuxferTransaction
     public required string Description { get; init; }
 
     public required string AccountId { get; init; }
+
+    public required decimal Id { get; init; }
 }
 
 public record BuxferOptions
@@ -199,7 +188,7 @@ public class BuxferTransaction
 
     public required DateOnly Date { get; init; }
 
-    public required BuxferTransactionType Type { get; init; }
+    public required string Type { get; init; }
 
     public required decimal AccountId { get; init; }
 

@@ -7,7 +7,7 @@ public record StatementEntry
 
     public required string? Product { get; init; }
 
-    public required string? Description { get; init; }
+    public required string Description { get; init; }
 
     public required decimal? Amount { get; init; }
 

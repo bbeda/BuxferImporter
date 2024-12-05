@@ -61,24 +61,31 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
 
             DailyBuxferTransactions[key].RemoveAll(t => removedTransactions.Contains(t));
         }
-
+;
         foreach (var result in statementMappingResults)
         {
             switch (result.Action)
             {
                 case StatementMappingAction.Create:
-                    await httpClient.CreateTransactionAsync(AccountId, new NewBuxferTransaction()
+                    await httpClient.CreateTransactionAsync(new NewBuxferTransaction()
                     {
                         AccountId = AccountId,
                         Amount = result.StatementEntry.Amount!.Value,
                         Date = DateOnly.FromDateTime(result.StatementEntry.StartDate!.Value.DateTime),
                         Description = result.StatementEntry.Description!,
                         Status = BuxferTransactionStatus.Cleared,
-                        Type = result.StatementEntry.Amount!.Value > 0 ? BuxferTransactionType.Income : BuxferTransactionType.Expense
+                        Type = result.StatementEntry.Amount!.Value > 0 ? BuxferTransactionType.Income : BuxferTransactionType.Expense,
+                        FromAccountId = default,
+                        ToAccountId = default,
                     });
                     break;
                 case StatementMappingAction.Update:
-                    await httpClient.UpdateTransactionAsync(AccountId, result.BuxferTransaction!.Id, result.StatementEntry);
+                    await httpClient.UpdateTransactionAsync(new UpdateBuxferTransaction()
+                    {
+                        AccountId = AccountId,
+                        Description = result.StatementEntry.Description,
+                        Id = result.BuxferTransaction!.Id
+                    });
                     break;
                 case StatementMappingAction.Delete:
                     await httpClient.DeleteTransactionAsync(result.BuxferTransaction!.Id.ToString());
@@ -103,3 +110,4 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
         Update,
         Delete
     }
+}

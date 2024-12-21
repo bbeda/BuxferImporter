@@ -94,6 +94,7 @@ public class BuxferHttpClient(
         var token = await LoadTokenAsync();
         var response = await httpClient.PostAsync($"delete_transaction?token={token}&id={transactionId}", new StringContent(""));
         _ = response.EnsureSuccessStatusCode();
+        Console.WriteLine($"Deleted{transactionId}");
     }
 
     public async Task CreateTransactionAsync(NewBuxferTransaction transaction)
@@ -101,18 +102,20 @@ public class BuxferHttpClient(
         using var httpClient = CreateHttpClient();
         var token = await LoadTokenAsync();
 
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        var content = new Dictionary<string, string?>
         {
             { "description", transaction.Description },
             { "amount", transaction.Amount.ToString() },
             { "date", transaction.Date.ToString("yyyy-MM-dd") },
-            { "type", transaction.Type.ToString() },
+            { "type", transaction.Type.ToString().ToLowerInvariant() },
             { "status", transaction.Status.ToString() },
             { "accountId", transaction.AccountId }
-        });
+        };
 
-        var response = await httpClient.PostAsync($"transaction_add?token={token}", content);
+        var url = QueryHelpers.AddQueryString($"transaction_add?token={token}", content);
+        var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
         _ = response.EnsureSuccessStatusCode();
+        Console.WriteLine($"Created{transaction.Date},{transaction.Amount}");
     }
 
     public async Task UpdateTransactionAsync(UpdateBuxferTransaction transaction)
@@ -122,13 +125,15 @@ public class BuxferHttpClient(
 
         var content = new Dictionary<string, string?>
         {
-            { "Description", transaction.Description },
-            { "AccountId", transaction.AccountId },
-            { "Id", transaction.Id.ToString()}
+            { "description", transaction.Description },
+            { "accountId", transaction.AccountId },
+            { "id", transaction.Id.ToString()}
         };
 
-        var response = await httpClient.PostAsync(QueryHelpers.AddQueryString($"transaction_edit?token={token}", content), new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
+        var url = QueryHelpers.AddQueryString($"transaction_edit?token={token}", content);
+        var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
         _ = response.EnsureSuccessStatusCode();
+        Console.WriteLine($"Updated{transaction.Id}");
     }
 
     private record TokenResponse(string Status, string Token);

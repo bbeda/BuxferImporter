@@ -14,6 +14,6 @@ var app = appBuilder.Build();
 
 app.Start();
 
-using var data = File.OpenRead(Path.Combine(@".\SampleFiles", "real_statement.csv"));
+using var data = File.OpenRead(Path.Combine(@".\SampleFiles", "statement1.csv"));
 var importer = app.Services.GetRequiredService<StatementMappingProcessor>();
 await importer.ImportAsync(data);

@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /BuxferImporter.Buxfer.Explorer/SampleFiles
 /statement-reader
+/BuxferImporter.Buxfer.Explorer/SampleFiles/statement.csv

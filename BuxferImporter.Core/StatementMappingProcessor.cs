@@ -1,18 +1,18 @@
 ﻿using BuxferImporter.Buxfer;
 
 namespace BuxferImporter.Core;
-public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementParser statementParser)
+public class StatementMappingProcessor(BuxferClient httpClient, IStatementParser statementParser)
 {
-    private const string AccountId = "1441844";
     private readonly Dictionary<DateOnly, List<BuxferTransaction>> DailyBuxferTransactions = new();
-    private readonly List<StatementMappingResult> statementMappingResults = new();
+    private readonly List<StatementMappingOperation> statementMappingOperations = new();
 
-    public async Task ImportAsync(Stream source)
+    public async IAsyncEnumerable<StatementMappingResult> ImportAsync(string accountId, Stream source)
     {
         await foreach (var entry in statementParser.ParseAsync(source))
         {
             if (entry.State != TransactionState.Completed)
             {
+                yield return StatementMappingResult.Skipped(entry.Id);
                 continue;
             }
 
@@ -21,7 +21,7 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
             var month = transactionDate.Month;
             if (!DailyBuxferTransactions.ContainsKey(transactionDate))
             {
-                var transactions = await httpClient.LoadAllTransactionsAsync(AccountId, transactionDate, transactionDate).ToListAsync();
+                var transactions = await httpClient.LoadAllTransactionsAsync(accountId, transactionDate, transactionDate).ToListAsync();
                 DailyBuxferTransactions[transactionDate] = transactions;
             }
 
@@ -31,14 +31,14 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
             switch (matchingTransaction)
             {
                 case null:
-                    statementMappingResults.Add(new StatementMappingResult
+                    statementMappingOperations.Add(new StatementMappingOperation
                     {
                         StatementEntry = entry,
                         Action = StatementMappingAction.Create
                     });
                     break;
                 default:
-                    statementMappingResults.Add(new StatementMappingResult
+                    statementMappingOperations.Add(new StatementMappingOperation
                     {
                         StatementEntry = entry,
                         BuxferTransaction = matchingTransaction,
@@ -56,7 +56,7 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
             removedTransactions.Clear();
             foreach (var transaction in DailyBuxferTransactions[key])
             {
-                statementMappingResults.Add(new StatementMappingResult
+                statementMappingOperations.Add(new StatementMappingOperation
                 {
                     BuxferTransaction = transaction,
                     Action = StatementMappingAction.Delete
@@ -67,38 +67,55 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
             DailyBuxferTransactions[key].RemoveAll(t => removedTransactions.Contains(t));
         }
 ;
-        foreach (var result in statementMappingResults)
+        foreach (var operation in statementMappingOperations)
         {
-            switch (result.Action)
+            switch (operation.Action)
             {
                 case StatementMappingAction.Create:
-                    await httpClient.CreateTransactionAsync(new NewBuxferTransaction()
+                    var createResponse = await httpClient.CreateTransactionAsync(new NewBuxferTransaction()
                     {
-                        AccountId = AccountId,
-                        Amount = result.StatementEntry.Amount!.Value,
-                        Date = DateOnly.FromDateTime(result.StatementEntry.StartDate!.Value.DateTime),
-                        Description = result.StatementEntry.Description!,
+                        AccountId = accountId,
+                        Amount = operation.StatementEntry.Amount!.Value,
+                        Date = DateOnly.FromDateTime(operation.StatementEntry.StartDate!.Value.DateTime),
+                        Description = operation.StatementEntry.Description!,
                         Status = BuxferTransactionStatus.Cleared,
-                        Type = result.StatementEntry.Amount!.Value > 0 ? BuxferTransactionType.Income : BuxferTransactionType.Expense,
+                        Type = operation.StatementEntry.Amount!.Value > 0 ? BuxferTransactionType.Income : BuxferTransactionType.Expense,
                         FromAccountId = default,
                         ToAccountId = default,
                     });
+                    yield return MapBuxferResponse(operation, createResponse);
                     break;
                 case StatementMappingAction.Update:
-                    await httpClient.UpdateTransactionAsync(new UpdateBuxferTransaction()
+                    var updateResponse = await httpClient.UpdateTransactionAsync(new UpdateBuxferTransaction()
                     {
-                        AccountId = AccountId,
-                        Description = result.StatementEntry.Description,
-                        Id = result.BuxferTransaction!.Id
+                        AccountId = accountId,
+                        Description = operation.StatementEntry.Description,
+                        Id = operation.BuxferTransaction!.Id
                     });
+
+                    yield return MapBuxferResponse(operation, updateResponse);
                     break;
                 case StatementMappingAction.Delete:
-                    await httpClient.DeleteTransactionAsync(result.BuxferTransaction!.Id.ToString());
+                    var deleteResponse = await httpClient.DeleteTransactionAsync(operation.BuxferTransaction!.Id.ToString());
+                    yield return MapBuxferResponse(operation, deleteResponse);
                     break;
+                case StatementMappingAction.None:
+                    yield return StatementMappingResult.Skipped(operation.StatementEntry.Id);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown action: {operation.Action}");
             }
         }
 
-
+        static StatementMappingResult MapBuxferResponse(StatementMappingOperation result, BuxferResponse response)
+        {
+            return response.Status switch
+            {
+                ResponseStatus.Success => StatementMappingResult.Created(response.Id!, result.StatementEntry.Id),
+                ResponseStatus.Error => StatementMappingResult.Error(result.StatementEntry.Id, null, [response.Message]),
+                _ => throw new InvalidOperationException($"Unknown response status: {response.Status}")//TODO: handle this case
+            };
+        }
     }
 
     private BuxferTransaction? FindMatchingTransaction(StatementEntry entry, IEnumerable<BuxferTransaction> transactions)
@@ -179,7 +196,7 @@ public class StatementMappingProcessor(BuxferHttpClient httpClient, IStatementPa
         return (1.0 - (double)distance / maxLen);
     }
 
-    internal record StatementMappingResult
+    internal record StatementMappingOperation
     {
         public StatementEntry StatementEntry { get; init; } = default!;
 

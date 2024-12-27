@@ -11,12 +11,12 @@ public static class Bootstrapper
 
         _ = services.Configure<BuxferOptions>(configuration.GetSection(BuxferOptions.SectionName));
 
-        _ = services.AddHttpClient(BuxferHttpClient.HttpClientName, (services, client) =>
+        _ = services.AddHttpClient(BuxferClient.HttpClientName, (services, client) =>
         {
             var buxferOptions = services.GetRequiredService<IOptions<BuxferOptions>>();
-            client.BaseAddress = new Uri(buxferOptions.Value.BaseAddress);
+            client.BaseAddress = new Uri(buxferOptions.Value.ApiUrl);
         });
-        _ = services.AddSingleton<BuxferHttpClient>();
+        _ = services.AddSingleton<BuxferClient>();
 
         return services;
     }

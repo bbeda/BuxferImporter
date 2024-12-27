@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Net.Http.Json;
+using System.Security.AccessControl;
 
 namespace BuxferImporter.Buxfer;
-public class BuxferHttpClient(
+public class BuxferClient(
     IHttpClientFactory httpClientFactory,
     IOptions<BuxferOptions> buxferOptions,
     IMemoryCache memoryCache)
@@ -88,52 +90,77 @@ public class BuxferHttpClient(
         } while (true);
     }
 
-    public async Task DeleteTransactionAsync(string transactionId)
+    public async Task<BuxferResponse> DeleteTransactionAsync(string transactionId)
     {
-        using var httpClient = CreateHttpClient();
-        var token = await LoadTokenAsync();
-        var response = await httpClient.PostAsync($"delete_transaction?token={token}&id={transactionId}", new StringContent(""));
-        _ = response.EnsureSuccessStatusCode();
-        Console.WriteLine($"Deleted{transactionId}");
+        try
+        {
+            using var httpClient = CreateHttpClient();
+            var token = await LoadTokenAsync();
+            var response = await httpClient.PostAsync($"delete_transaction?token={token}&id={transactionId}", new StringContent(""));
+            _ = response.EnsureSuccessStatusCode();
+
+            return new BuxferResponse { Status = ResponseStatus.Success, Id = transactionId };
+        }
+        catch (Exception exception)
+        {
+            return new BuxferResponse { Status = ResponseStatus.Error, Message = exception.Message };
+        }
     }
 
-    public async Task CreateTransactionAsync(NewBuxferTransaction transaction)
+    public async Task<BuxferResponse> CreateTransactionAsync(NewBuxferTransaction transaction)
     {
-        using var httpClient = CreateHttpClient();
-        var token = await LoadTokenAsync();
-
-        var content = new Dictionary<string, string?>
+        try
         {
-            { "description", transaction.Description },
-            { "amount", transaction.Amount.ToString() },
-            { "date", transaction.Date.ToString("yyyy-MM-dd") },
-            { "type", transaction.Type.ToString().ToLowerInvariant() },
-            { "status", transaction.Status.ToString() },
-            { "accountId", transaction.AccountId }
-        };
+            using var httpClient = CreateHttpClient();
+            var token = await LoadTokenAsync();
 
-        var url = QueryHelpers.AddQueryString($"transaction_add?token={token}", content);
-        var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
-        _ = response.EnsureSuccessStatusCode();
-        Console.WriteLine($"Created{transaction.Date},{transaction.Amount}");
+            var content = new Dictionary<string, string?>
+            {
+                { "description", transaction.Description },
+                { "amount", transaction.Amount.ToString() },
+                { "date", transaction.Date.ToString("yyyy-MM-dd") },
+                { "type", transaction.Type.ToString().ToLowerInvariant() },
+                { "status", transaction.Status.ToString() },
+                { "accountId", transaction.AccountId }
+            };
+
+            var url = QueryHelpers.AddQueryString($"transaction_add?token={token}", content);
+
+            var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
+            _ = response.EnsureSuccessStatusCode();
+
+            return new BuxferResponse { Status = ResponseStatus.Success, Id = "" }; //TODO: Parse response  
+        }
+        catch (Exception exception)
+        {
+            return new BuxferResponse { Status = ResponseStatus.Error, Message = exception.Message };
+        }
     }
 
-    public async Task UpdateTransactionAsync(UpdateBuxferTransaction transaction)
+    public async Task<BuxferResponse> UpdateTransactionAsync(UpdateBuxferTransaction transaction)
     {
-        using var httpClient = CreateHttpClient();
-        var token = await LoadTokenAsync();
-
-        var content = new Dictionary<string, string?>
+        try
         {
-            { "description", transaction.Description },
-            { "accountId", transaction.AccountId },
-            { "id", transaction.Id.ToString()}
-        };
+            using var httpClient = CreateHttpClient();
+            var token = await LoadTokenAsync();
 
-        var url = QueryHelpers.AddQueryString($"transaction_edit?token={token}", content);
-        var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
-        _ = response.EnsureSuccessStatusCode();
-        Console.WriteLine($"Updated{transaction.Id}");
+            var content = new Dictionary<string, string?>
+            {
+                { "description", transaction.Description },
+                { "accountId", transaction.AccountId },
+                { "id", transaction.Id.ToString()}
+            };
+
+            var url = QueryHelpers.AddQueryString($"transaction_edit?token={token}", content);
+            var response = await httpClient.PostAsync(url, new FormUrlEncodedContent(Enumerable.Empty<KeyValuePair<string, string>>()));
+            _ = response.EnsureSuccessStatusCode();
+
+            return new BuxferResponse { Status = ResponseStatus.Success, Id = transaction.Id.ToString() };
+        }
+        catch (Exception exception)
+        {
+            return new BuxferResponse { Status = ResponseStatus.Error, Message = exception.Message };
+        }
     }
 
     private record TokenResponse(string Status, string Token);
@@ -161,7 +188,7 @@ public record BuxferOptions
 
     public required string Password { get; init; }
 
-    public required string BaseAddress { get; init; }
+    public required string ApiUrl { get; init; }
 }
 
 public class NewBuxferTransaction
@@ -251,4 +278,20 @@ public enum BuxferTransactionStatus
 {
     Cleared,
     Pending
+}
+
+public enum ResponseStatus
+{
+    Success,
+    Error,
+    CriticalError
+}
+
+public record BuxferResponse
+{
+    public required ResponseStatus Status { get; init; }
+
+    public string Message { get; init; } = string.Empty;
+
+    public string? Id { get; init; }
 }

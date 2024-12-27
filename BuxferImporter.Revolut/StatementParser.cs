@@ -17,6 +17,7 @@ internal class StatementParser : IStatementParser
 
         await csvParser.ReadAsync();
 
+        var index = 0;
         while (await csvParser.ReadAsync())
         {
             var transactionType = MapTransactionType(csvParser[0]);
@@ -33,6 +34,7 @@ internal class StatementParser : IStatementParser
 
             yield return new StatementEntry()
             {
+                Id = index.ToString(),
                 TransactionType = transactionType,
                 Product = product,
                 StartDate = startDate,
@@ -45,6 +47,7 @@ internal class StatementParser : IStatementParser
                 Balance = balance
             };
 
+            index++;
         }
 
         static DateTimeOffset? ParseDate(string input)

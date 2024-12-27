@@ -3,6 +3,8 @@
 namespace BuxferImporter.Core;
 public record StatementEntry
 {
+    public required string Id { get; init; }
+
     public required TransactionType? TransactionType { get; init; }
 
     public required string? Product { get; init; }

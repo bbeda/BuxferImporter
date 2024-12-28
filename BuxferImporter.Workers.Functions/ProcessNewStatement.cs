@@ -1,17 +1,18 @@
 using Azure.Storage.Blobs;
 using BuxferImporter.Core;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Enumeration;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BuxferImporter.Workers.Functions;
 
 public class ProcessNewStatement
 {
-    private readonly IServiceProvider serviceProvider;
+    private const string StorageAccountConnectionStringName = "AzureWebJobsStorage";
+    private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<StatementOptions> _mappingOptions;
     private readonly ILogger<ProcessNewStatement> _logger;
 
@@ -20,17 +21,20 @@ public class ProcessNewStatement
         IOptions<StatementOptions> mappingOptions,
         ILogger<ProcessNewStatement> logger)
     {
-        this.serviceProvider = serviceProvider;
+        _serviceProvider = serviceProvider;
         _mappingOptions = mappingOptions;
         _logger = logger;
     }
 
     [Function(nameof(ProcessNewStatement))]
-    public async Task Run([BlobTrigger("statements", Connection = "AzureWebJobsStorage")] BlobClient inputBlobClient, FunctionContext functionContext)
+    public async Task Run([BlobTrigger("statements", Connection = StorageAccountConnectionStringName)] BlobClient inputBlobClient, FunctionContext functionContext)
     {
         var matchingMapping = _mappingOptions.Value.Entries.FirstOrDefault(x => FileSystemName.MatchesSimpleExpression(x.File, inputBlobClient.Name, true));
 
-        var blobServiceClient = new BlobServiceClient("UseDevelopmentStorage=true");
+        var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
+        var blobConnectionString = configuration.GetValue<string>(StorageAccountConnectionStringName);
+
+        var blobServiceClient = new BlobServiceClient(blobConnectionString);
         var containerClient = blobServiceClient.GetBlobContainerClient("output");
         _ = await containerClient.CreateIfNotExistsAsync();
 
@@ -51,7 +55,7 @@ public class ProcessNewStatement
         await writer.WriteLineAsync(matchingMapping.ToString());
         await writer.FlushAsync();
 
-        var processor = serviceProvider.GetRequiredKeyedService<StatementMappingProcessor>(matchingMapping.StatementType);
+        var processor = _serviceProvider.GetRequiredKeyedService<StatementMappingProcessor>(matchingMapping.StatementType);
 
         using var stream = await inputBlobClient.OpenReadAsync();
         var skippedCount = 0;

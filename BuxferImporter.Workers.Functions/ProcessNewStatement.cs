@@ -12,16 +12,13 @@ namespace BuxferImporter.Workers.Functions;
 public class ProcessNewStatement
 {
     private const string StorageAccountConnectionStringName = "AzureWebJobsStorage";
-    private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<StatementOptions> _mappingOptions;
     private readonly ILogger<ProcessNewStatement> _logger;
 
     public ProcessNewStatement(
-        IServiceProvider serviceProvider,
         IOptions<StatementOptions> mappingOptions,
         ILogger<ProcessNewStatement> logger)
     {
-        _serviceProvider = serviceProvider;
         _mappingOptions = mappingOptions;
         _logger = logger;
     }
@@ -31,7 +28,7 @@ public class ProcessNewStatement
     {
         var matchingMapping = _mappingOptions.Value.Entries.FirstOrDefault(x => FileSystemName.MatchesSimpleExpression(x.File, inputBlobClient.Name, true));
 
-        var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
+        var configuration = functionContext.InstanceServices.GetRequiredService<IConfiguration>();
         var blobConnectionString = configuration.GetValue<string>(StorageAccountConnectionStringName);
 
         var blobServiceClient = new BlobServiceClient(blobConnectionString);
@@ -55,7 +52,7 @@ public class ProcessNewStatement
         await writer.WriteLineAsync(matchingMapping.ToString());
         await writer.FlushAsync();
 
-        var processor = _serviceProvider.GetRequiredKeyedService<StatementMappingProcessor>(matchingMapping.StatementType);
+        var processor = functionContext.InstanceServices.GetRequiredKeyedService<StatementMappingProcessor>(matchingMapping.StatementType);
 
         using var stream = await inputBlobClient.OpenReadAsync();
         var skippedCount = 0;

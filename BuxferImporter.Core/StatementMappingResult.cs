@@ -4,22 +4,30 @@ public record StatementMappingResult
     private StatementMappingResult(
         StatementMappingResultType statementMappingResultType,
         string? buxferId,
-        string? statementId,
+        StatementEntry? statementEntry,
         IReadOnlyCollection<string>? errors,
-        IReadOnlyCollection<UpdatedValueInfo>? updatedValues)
+        IReadOnlyCollection<UpdatedValueInfo>? updatedValues,
+        string? details)
     {
         ResultType = statementMappingResultType;
+
         BuxferId = buxferId;
-        StatementId = statementId;
+        StatementEntry = statementEntry;
+
         Errors = errors;
         UpdatedValues = updatedValues;
+        Details = details;
     }
 
     public StatementMappingResultType ResultType { get; init; }
 
+    public StatementEntry? StatementEntry { get; init; }
+
     public string? BuxferId { get; init; }
 
-    public string? StatementId { get; init; }
+    public string? StatementId => StatementEntry?.Id;
+
+    public string? Details { get; init; }
 
     public IReadOnlyCollection<string>? Errors { get; init; }
 
@@ -27,35 +35,17 @@ public record StatementMappingResult
 
     public record UpdatedValueInfo(string? OldValue, string? NewValue);
 
-    public static StatementMappingResult Created(string buxferId, string statementId)
-    {
-        return new StatementMappingResult(StatementMappingResultType.Added, buxferId, statementId, null, null);
-    }
+    public static StatementMappingResult Created(string buxferId, StatementEntry statementEntry) => new(StatementMappingResultType.Added, buxferId, statementEntry, null, null, null);
 
-    public static StatementMappingResult Updated(string buxferId, string statementId, IReadOnlyCollection<UpdatedValueInfo> updatedValues)
-    {
-        return new StatementMappingResult(StatementMappingResultType.Updated, buxferId, statementId, null, updatedValues);
-    }
+    public static StatementMappingResult Updated(string buxferId, StatementEntry statemenEntry, IReadOnlyCollection<UpdatedValueInfo> updatedValues) => new(StatementMappingResultType.Updated, buxferId, statemenEntry, null, updatedValues, null);
 
-    public static StatementMappingResult Skipped(string statementId)
-    {
-        return new StatementMappingResult(StatementMappingResultType.Skipped, null, statementId, null, null);
-    }
+    public static StatementMappingResult Skipped(StatementEntry statementEntry, string? buxferId, string details) => new(StatementMappingResultType.Skipped, buxferId, statementEntry, null, null, details);
 
-    public static StatementMappingResult NoAction(string statementId, string buxferId)
-    {
-        return new StatementMappingResult(StatementMappingResultType.NoAction, buxferId, statementId, null, null);
-    }
+    public static StatementMappingResult NoAction(StatementEntry statementEntry, string buxferId, string details) => new(StatementMappingResultType.NoAction, buxferId, statementEntry, null, null, details);
 
-    public static StatementMappingResult Deleted(string buxferId)
-    {
-        return new StatementMappingResult(StatementMappingResultType.Deleted, buxferId, null, null, null);
-    }
+    public static StatementMappingResult Deleted(string buxferId) => new(StatementMappingResultType.Deleted, buxferId, null, null, null, null);
 
-    public static StatementMappingResult Error(string? statementId, string? buxferId, IReadOnlyCollection<string> errors)
-    {
-        return new StatementMappingResult(StatementMappingResultType.Error, buxferId, statementId, errors, null);
-    }
+    public static StatementMappingResult Error(StatementEntry statementEntry, string? buxferId, IReadOnlyCollection<string> errors) => new(StatementMappingResultType.Error, buxferId, statementEntry, errors, null, null);
 }
 
 public enum StatementMappingResultType

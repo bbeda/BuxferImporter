@@ -12,7 +12,7 @@ public class StatementMappingProcessor(BuxferClient httpClient, IStatementParser
         {
             if (entry.State != TransactionState.Completed)
             {
-                yield return StatementMappingResult.Skipped(entry.Id);
+                yield return StatementMappingResult.Skipped(entry, default, $"State: {(entry.State?.ToString() ?? "Missing")}");
                 continue;
             }
 
@@ -83,7 +83,7 @@ public class StatementMappingProcessor(BuxferClient httpClient, IStatementParser
                         FromAccountId = default,
                         ToAccountId = default,
                     });
-                    yield return MapBuxferResponse(operation, createResponse);
+                    yield return MapBuxferResponse(operation, createResponse, () => StatementMappingResult.Created(createResponse.Id!, operation.StatementEntry));
                     break;
                 case StatementMappingAction.Update:
                     var updateResponse = await httpClient.UpdateTransactionAsync(new UpdateBuxferTransaction()
@@ -93,26 +93,31 @@ public class StatementMappingProcessor(BuxferClient httpClient, IStatementParser
                         Id = operation.BuxferTransaction!.Id
                     });
 
-                    yield return MapBuxferResponse(operation, updateResponse);
+                    IReadOnlyCollection<StatementMappingResult.UpdatedValueInfo> updatedProperties = [new StatementMappingResult.UpdatedValueInfo(operation.BuxferTransaction.Description, operation.StatementEntry.Description)];
+
+                    yield return MapBuxferResponse(operation, updateResponse, () => StatementMappingResult.Updated(
+                        updateResponse.Id!,
+                        operation.StatementEntry,
+                        updatedProperties));
                     break;
                 case StatementMappingAction.Delete:
                     var deleteResponse = await httpClient.DeleteTransactionAsync(operation.BuxferTransaction!.Id.ToString());
-                    yield return MapBuxferResponse(operation, deleteResponse);
+                    yield return MapBuxferResponse(operation, deleteResponse, () => StatementMappingResult.Deleted(operation.BuxferTransaction.Id.ToString()));
                     break;
                 case StatementMappingAction.None:
-                    yield return StatementMappingResult.Skipped(operation.StatementEntry.Id);
+                    yield return StatementMappingResult.Skipped(operation.StatementEntry, operation.BuxferTransaction?.Id.ToString(), "Nothing changed");
                     break;
                 default:
                     throw new InvalidOperationException($"Unknown action: {operation.Action}");
             }
         }
 
-        static StatementMappingResult MapBuxferResponse(StatementMappingOperation result, BuxferResponse response)
+        static StatementMappingResult MapBuxferResponse(StatementMappingOperation result, BuxferResponse response, Func<StatementMappingResult> success)
         {
             return response.Status switch
             {
-                ResponseStatus.Success => StatementMappingResult.Created(response.Id!, result.StatementEntry.Id),
-                ResponseStatus.Error => StatementMappingResult.Error(result.StatementEntry.Id, null, [response.Message]),
+                ResponseStatus.Success => success(),
+                ResponseStatus.Error => StatementMappingResult.Error(result.StatementEntry, null, [response.Message]),
                 _ => throw new InvalidOperationException($"Unknown response status: {response.Status}")//TODO: handle this case
             };
         }

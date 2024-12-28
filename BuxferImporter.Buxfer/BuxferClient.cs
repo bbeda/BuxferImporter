@@ -29,7 +29,7 @@ public class BuxferClient(
 
     private async Task<string> LoadTokenAsync()
     {
-        if (memoryCache.TryGetValue(BuxferTokenKey, out string cachedToken))
+        if (memoryCache.TryGetValue(BuxferTokenKey, out string? cachedToken))
         {
             return cachedToken!;
         }

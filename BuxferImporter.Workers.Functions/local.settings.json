@@ -6,6 +6,6 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "Buxfer:ApiUrl": "https://www.buxfer.com/api/",
     "Statements:Entries:0:StatementType": "RevolutCsv",
-    "Statements:Entries:0:File": "statement1.csv"
+    "Statements:Entries:0:File": "joint*.csv"
   }
 }

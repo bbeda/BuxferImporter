@@ -47,6 +47,8 @@ jobs:
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
         
     - name: Setup tmate session
+      if: failure()
+      timeout-minutes: 5
       uses: mxschmitt/action-tmate@v3
       with: 
         limit-access-to-actor: true

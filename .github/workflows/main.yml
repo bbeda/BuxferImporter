@@ -37,7 +37,9 @@ jobs:
         pwd
         dotnet build --configuration Release --output ./output
         popd
-
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       id: fa

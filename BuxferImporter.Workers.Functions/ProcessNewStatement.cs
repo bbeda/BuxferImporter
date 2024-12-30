@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Enumeration;
+using System.Text;
 
 namespace BuxferImporter.Workers.Functions;
 
@@ -55,22 +56,37 @@ public class ProcessNewStatement
         var processor = functionContext.InstanceServices.GetRequiredKeyedService<StatementMappingProcessor>(matchingMapping.StatementType);
 
         using var stream = await inputBlobClient.OpenReadAsync();
-        var skippedCount = 0;
+
+        var stats = new Dictionary<StatementMappingResultType, int>();
+        foreach (var stat in Enum.GetValues<StatementMappingResultType>())
+        {
+            stats[stat] = 0;
+        }
+
         var totalCount = 0;
 
         await foreach (var result in processor.ImportAsync(matchingMapping.Account, stream))
         {
             totalCount++;
+            stats[result.ResultType]++;
+
             if (result.ResultType == StatementMappingResultType.Skipped)
             {
-                skippedCount++;
-                continue;
+                _logger.LogInformation($"{result.ResultType} {result.StatementId} {result.BuxferId} {result.Details}");
             }
-            _logger.LogInformation($"{result.ResultType} {result.StatementId} {result.BuxferId} {result.Details}");
+
             await writer.WriteLineAsync(result.ToString());
             await writer.FlushAsync();
         }
-        var footer = $"Total:{totalCount}, Skipped:{skippedCount}";
+        var footerBuilder = new StringBuilder();
+        footerBuilder.Append($"Total:{totalCount}");
+        foreach (var stat in stats)
+        {
+            footerBuilder.Append($" {stat.Key}:{stat.Value}");
+        }
+
+        var footer = footerBuilder.ToString();
+
         _logger.LogInformation(footer);
         await writer.WriteLineAsync(footer);
     }
